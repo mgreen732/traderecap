@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const SETUPS = ["FVG", "Liquidity Sweep", "Order Block", "FVG + OB", "Sweep + FVG", "Sweep + OB"];
 const SESSIONS = ["London", "New York", "Asian", "London/NY Overlap"];
@@ -30,11 +30,27 @@ const emotionLabels = ["Fearful", "Anxious", "Neutral", "Confident", "Discipline
 const emotionColors = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#10b981"];
 
 export default function TradeJournal() {
-  const [trades, setTrades] = useState([]);
+  const [trades, setTrades] = useState(() => {
+    try {
+      const saved = localStorage.getItem("edge-journal-trades");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [form, setForm] = useState(initialForm);
-  const [view, setView] = useState("log"); // log | history | stats
+  const [view, setView] = useState("log");
   const [filterSetup, setFilterSetup] = useState("All");
   const [expandedId, setExpandedId] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("edge-journal-trades", JSON.stringify(trades));
+    } catch {
+      console.error("Could not save trades");
+    }
+  }, [trades]);
 
   const handleChange = (field, value) => setForm((f) => ({ ...f, [field]: value }));
 
@@ -53,6 +69,8 @@ export default function TradeJournal() {
     const newTrade = { ...form, id: Date.now() };
     setTrades((prev) => [newTrade, ...prev]);
     setForm({ ...initialForm, date: form.date });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
     setView("history");
   };
 
@@ -77,12 +95,12 @@ export default function TradeJournal() {
 
   return (
     <div style={styles.root}>
-      {/* Header */}
       <div style={styles.header}>
         <div style={styles.logo}>
           <span style={styles.logoIcon}>◈</span>
           <span style={styles.logoText}>EDGE JOURNAL</span>
         </div>
+        {saved && <span style={styles.savedBadge}>✓ SAVED</span>}
         <div style={styles.nav}>
           {["log", "history", "stats"].map((v) => (
             <button
@@ -97,7 +115,6 @@ export default function TradeJournal() {
       </div>
 
       <div style={styles.body}>
-        {/* QUICK STATS BAR */}
         <div style={styles.statsBar}>
           {[
             { label: "Total Trades", val: trades.length, color: "#94a3b8" },
@@ -112,11 +129,9 @@ export default function TradeJournal() {
           ))}
         </div>
 
-        {/* LOG TRADE VIEW */}
         {view === "log" && (
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>New Trade Entry</h2>
-
             <div style={styles.grid2}>
               <div style={styles.field}>
                 <label style={styles.label}>Date</label>
@@ -147,7 +162,6 @@ export default function TradeJournal() {
               </div>
             </div>
 
-            {/* SETUP */}
             <div style={styles.field}>
               <label style={styles.label}>Setup Type</label>
               <div style={styles.setupGrid}>
@@ -160,7 +174,6 @@ export default function TradeJournal() {
               </div>
             </div>
 
-            {/* CHECKLIST */}
             <div style={styles.field}>
               <label style={styles.label}>Confluence Checklist</label>
               <div style={styles.checkGrid}>
@@ -180,7 +193,6 @@ export default function TradeJournal() {
               </div>
             </div>
 
-            {/* PRICE LEVELS */}
             <div style={styles.grid3}>
               {[
                 { key: "entry", label: "Entry" },
@@ -214,7 +226,6 @@ export default function TradeJournal() {
               </div>
             </div>
 
-            {/* EMOTION */}
             <div style={styles.field}>
               <label style={styles.label}>Emotional State — <span style={{ color: emotionColors[form.emotionRating - 1] }}>{emotionLabels[form.emotionRating - 1]}</span></label>
               <input type="range" min="1" max="5" value={form.emotionRating}
@@ -227,7 +238,6 @@ export default function TradeJournal() {
               </div>
             </div>
 
-            {/* NOTES */}
             <div style={styles.field}>
               <label style={styles.label}>Notes / Trade Reasoning</label>
               <textarea style={styles.textarea} placeholder="Describe the setup: where was the sweep? Where was the FVG? What was the OB reaction?..."
@@ -240,7 +250,6 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* HISTORY VIEW */}
         {view === "history" && (
           <div style={styles.card}>
             <div style={styles.historyHeader}>
@@ -299,7 +308,6 @@ export default function TradeJournal() {
           </div>
         )}
 
-        {/* STATS VIEW */}
         {view === "stats" && (
           <div style={styles.card}>
             <h2 style={styles.cardTitle}>Performance Analytics</h2>
@@ -338,7 +346,6 @@ export default function TradeJournal() {
                   </>
                 )}
 
-                {/* Session breakdown */}
                 <h3 style={styles.sectionTitle}>Session Breakdown</h3>
                 {SESSIONS.map((sess) => {
                   const st = trades.filter((t) => t.session === sess);
@@ -364,98 +371,48 @@ export default function TradeJournal() {
 }
 
 const styles = {
-  root: {
-    minHeight: "100vh",
-    background: "#070b14",
-    color: "#e2e8f0",
-    fontFamily: "'Courier New', 'Lucida Console', monospace",
-  },
-  header: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "16px 24px",
-    borderBottom: "1px solid #1e293b",
-    background: "#0a0f1e",
-    flexWrap: "wrap",
-    gap: "12px",
-  },
+  root: { minHeight: "100vh", background: "#070b14", color: "#e2e8f0", fontFamily: "'Courier New', 'Lucida Console', monospace" },
+  header: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 24px", borderBottom: "1px solid #1e293b", background: "#0a0f1e", flexWrap: "wrap", gap: "12px" },
   logo: { display: "flex", alignItems: "center", gap: "10px" },
   logoIcon: { fontSize: "22px", color: "#60a5fa" },
   logoText: { fontSize: "15px", fontWeight: "700", letterSpacing: "4px", color: "#60a5fa" },
+  savedBadge: { fontSize: "11px", letterSpacing: "2px", color: "#10b981", border: "1px solid #10b981", padding: "4px 10px", borderRadius: "4px" },
   nav: { display: "flex", gap: "8px", flexWrap: "wrap" },
-  navBtn: {
-    padding: "6px 14px", fontSize: "12px", letterSpacing: "1px",
-    background: "transparent", border: "1px solid #1e293b", color: "#64748b",
-    cursor: "pointer", borderRadius: "4px", transition: "all 0.2s",
-  },
+  navBtn: { padding: "6px 14px", fontSize: "12px", letterSpacing: "1px", background: "transparent", border: "1px solid #1e293b", color: "#64748b", cursor: "pointer", borderRadius: "4px" },
   navBtnActive: { borderColor: "#60a5fa", color: "#60a5fa", background: "#60a5fa11" },
   body: { maxWidth: "780px", margin: "0 auto", padding: "24px 16px" },
-  statsBar: {
-    display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap",
-  },
-  statPill: {
-    flex: "1 1 120px", background: "#0d1526", border: "1px solid #1e293b",
-    borderRadius: "8px", padding: "12px 16px", display: "flex", flexDirection: "column", alignItems: "center",
-  },
+  statsBar: { display: "flex", gap: "12px", marginBottom: "20px", flexWrap: "wrap" },
+  statPill: { flex: "1 1 120px", background: "#0d1526", border: "1px solid #1e293b", borderRadius: "8px", padding: "12px 16px", display: "flex", flexDirection: "column", alignItems: "center" },
   statVal: { fontSize: "20px", fontWeight: "700" },
   statLabel: { fontSize: "10px", color: "#475569", letterSpacing: "1px", marginTop: "2px" },
-  card: {
-    background: "#0a0f1e", border: "1px solid #1e293b",
-    borderRadius: "12px", padding: "28px",
-  },
+  card: { background: "#0a0f1e", border: "1px solid #1e293b", borderRadius: "12px", padding: "28px" },
   cardTitle: { fontSize: "14px", letterSpacing: "3px", color: "#94a3b8", marginBottom: "24px", marginTop: 0 },
   grid2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" },
   grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "16px" },
   field: { marginBottom: "16px" },
   label: { display: "block", fontSize: "11px", letterSpacing: "2px", color: "#475569", marginBottom: "8px" },
-  input: {
-    width: "100%", background: "#0d1a2d", border: "1px solid #1e293b", color: "#e2e8f0",
-    padding: "10px 12px", borderRadius: "6px", fontSize: "13px", outline: "none",
-    boxSizing: "border-box", fontFamily: "inherit",
-  },
-  textarea: {
-    width: "100%", background: "#0d1a2d", border: "1px solid #1e293b", color: "#94a3b8",
-    padding: "12px", borderRadius: "6px", fontSize: "12px", outline: "none",
-    minHeight: "80px", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit",
-    lineHeight: "1.6",
-  },
+  input: { width: "100%", background: "#0d1a2d", border: "1px solid #1e293b", color: "#e2e8f0", padding: "10px 12px", borderRadius: "6px", fontSize: "13px", outline: "none", boxSizing: "border-box", fontFamily: "inherit" },
+  textarea: { width: "100%", background: "#0d1a2d", border: "1px solid #1e293b", color: "#94a3b8", padding: "12px", borderRadius: "6px", fontSize: "12px", outline: "none", minHeight: "80px", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit", lineHeight: "1.6" },
   btnGroup: { display: "flex", gap: "8px" },
-  toggleBtn: {
-    flex: 1, padding: "10px", background: "#0d1a2d", border: "1px solid #1e293b",
-    color: "#475569", cursor: "pointer", borderRadius: "6px", fontSize: "12px", letterSpacing: "1px",
-  },
+  toggleBtn: { flex: 1, padding: "10px", background: "#0d1a2d", border: "1px solid #1e293b", color: "#475569", cursor: "pointer", borderRadius: "6px", fontSize: "12px", letterSpacing: "1px" },
   toggleLong: { borderColor: "#10b981", color: "#10b981", background: "#10b98111" },
   toggleShort: { borderColor: "#ef4444", color: "#ef4444", background: "#ef444411" },
   setupGrid: { display: "flex", flexWrap: "wrap", gap: "8px" },
-  setupBtn: {
-    padding: "7px 14px", background: "#0d1a2d", border: "1px solid #1e293b",
-    color: "#475569", cursor: "pointer", borderRadius: "4px", fontSize: "11px", letterSpacing: "1px",
-  },
+  setupBtn: { padding: "7px 14px", background: "#0d1a2d", border: "1px solid #1e293b", color: "#475569", cursor: "pointer", borderRadius: "4px", fontSize: "11px", letterSpacing: "1px" },
   setupBtnActive: { borderColor: "#60a5fa", color: "#60a5fa", background: "#60a5fa11" },
   checkGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" },
   checkItem: { display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "8px", borderRadius: "6px", border: "1px solid #1e293b" },
-  checkbox: {
-    width: "18px", height: "18px", border: "1px solid #334155", borderRadius: "4px",
-    display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", color: "#0a0f1e", flexShrink: 0,
-  },
+  checkbox: { width: "18px", height: "18px", border: "1px solid #334155", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", color: "#0a0f1e", flexShrink: 0 },
   checkboxOn: { background: "#10b981", borderColor: "#10b981" },
   checkLabel: { fontSize: "12px", color: "#94a3b8", letterSpacing: "1px" },
   slider: { width: "100%", margin: "8px 0 4px", accentColor: "#60a5fa" },
   sliderLabels: { display: "flex", justifyContent: "space-between" },
   sliderLabel: { fontSize: "9px", letterSpacing: "0.5px" },
-  submitBtn: {
-    width: "100%", padding: "14px", background: "#60a5fa11", border: "1px solid #60a5fa",
-    color: "#60a5fa", cursor: "pointer", borderRadius: "6px", fontSize: "13px",
-    letterSpacing: "3px", marginTop: "8px", transition: "all 0.2s",
-  },
+  submitBtn: { width: "100%", padding: "14px", background: "#60a5fa11", border: "1px solid #60a5fa", color: "#60a5fa", cursor: "pointer", borderRadius: "6px", fontSize: "13px", letterSpacing: "3px", marginTop: "8px" },
   historyHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" },
   empty: { color: "#334155", textAlign: "center", padding: "40px", fontSize: "13px", letterSpacing: "1px" },
   tradeRow: { border: "1px solid #1e293b", borderRadius: "8px", marginBottom: "10px", overflow: "hidden" },
-  tradeRowTop: {
-    display: "flex", justifyContent: "space-between", alignItems: "center",
-    padding: "12px 16px", cursor: "pointer", gap: "8px", flexWrap: "wrap",
-  },
+  tradeRowTop: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", cursor: "pointer", gap: "8px", flexWrap: "wrap" },
   tradeLeft: { display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" },
   tradeRight: { display: "flex", alignItems: "center", gap: "10px" },
   outcomeTag: { padding: "2px 8px", borderRadius: "4px", fontSize: "10px", letterSpacing: "1px", border: "1px solid" },
@@ -464,9 +421,7 @@ const styles = {
   tradeSetup: { fontSize: "10px", color: "#475569", letterSpacing: "1px" },
   tradeDate: { fontSize: "11px", color: "#334155" },
   tradeRR: { fontSize: "12px", color: "#60a5fa" },
-  deleteBtn: {
-    background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: "12px", padding: "2px 6px",
-  },
+  deleteBtn: { background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: "12px", padding: "2px 6px" },
   tradeExpanded: { padding: "16px", borderTop: "1px solid #1e293b", background: "#0d1526" },
   expandGrid: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "12px", marginBottom: "12px", fontSize: "12px", color: "#94a3b8" },
   expandLabel: { fontSize: "9px", letterSpacing: "1px", color: "#334155" },
