@@ -1,4 +1,9 @@
-Tap "Add file" → "Create new file"
-In the filename box type src/main.jsx — GitHub automatically creates the folder when you put a / in the name
-Copy the contents of main.jsx from above and paste it in
-Tap "Commit changes"
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.jsx";
+
+createRoot(document.getElementById("root")).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
